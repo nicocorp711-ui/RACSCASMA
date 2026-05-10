@@ -2088,21 +2088,7 @@ function generarVale(id){
   <div class="firmas"><div class="fb">${fsig(r.firmaRegistro,'Firma Registrador')}<div style="font-size:9px;color:#555;margin-top:2px;">${r.reportador||''}</div></div>
   ${r.firmaEdicion&&r.firmaEdicion!=='null'?`<div class="fb">${fsig(r.firmaEdicion,'Firma Editor')}</div>`:''}</div>
   <div style="text-align:center;margin-top:20px;font-size:8px;color:#aaa;border-top:1px solid #eee;padding-top:6px;">Compañía Minera Casma SAC — RUC 20606447192</div>
-  <script>
-  window.onload=()=>{
-    const imgs=document.querySelectorAll('img');
-    if(!imgs.length){setTimeout(()=>window.print(),500);return;}
-    let loaded=0;
-    const total=imgs.length;
-    const tryPrint=()=>{loaded++;if(loaded>=total)setTimeout(()=>window.print(),300);};
-    imgs.forEach(img=>{
-      if(img.complete){tryPrint();}
-      else{img.onload=tryPrint;img.onerror=tryPrint;}
-    });
-    // Fallback: si en 6s no cargaron todas, imprimir igual
-    setTimeout(()=>window.print(),6000);
-  };
-  <\/script></body></html>`;
+  <script>window.onload=()=>setTimeout(()=>window.print(),2000);<\/script></body></html>`;
   const w=window.open('','_blank');w.document.write(h);w.document.close();
 }
 
@@ -2111,11 +2097,11 @@ function exportarPDF(){
   const data=getReportes();if(!data.length){showToast('No hay reportes');return;}
   const fd=f=>{if(!f)return'';try{return new Date(f).toLocaleDateString('es-PE');}catch{return f;}};
   const driveThumb=u=>{const gid=(u.match(/[?&]id=([\w-]+)/)||u.match(/\/d\/([\w-]+)/))?.[1];return gid?'https://lh3.googleusercontent.com/d/'+gid+'=w120':u;};
-  const firmThumb=u=>{if(!u||u==='null'||u.startsWith('data:'))return'';const gid=(u.match(/[?&]id=([\w-]+)/)||u.match(/\/d\/([\w-]+)/))?.[1];return gid?'https://lh3.googleusercontent.com/d/'+gid+'=w80':u;};
+  const firmThumb=u=>{if(!u||u==='null'||u.startsWith('data:'))return'';const gid=(u.match(/[?&]id=([\w-]+)/)||u.match(/\/d\/([\w-]+)/))?.[1];return gid?'https://lh3.googleusercontent.com/d/'+gid+'=w300':u;};
   let rows='';
   data.forEach(r=>{
     const fH=toArray(r.fotos).length?toArray(r.fotos):toArray(r.linksFotos);
-    const ic=u=>u.slice(0,1).map(x=>'<img src="'+driveThumb(x)+'" style="width:55px;height:40px;object-fit:cover;border-radius:3px;" onerror="this.style.display='none'">').join('');
+    const ic=u=>u.slice(0,1).map(x=>'<img src="'+driveThumb(x)+'" style="width:55px;height:40px;object-fit:cover;border-radius:3px;" onerror="this.style.display=\'none\'">').join('');
     const e=r.estado||'Abierto';
     const firmaImg=firmThumb(r.firmaRegistro);
     rows+=`<tr>
@@ -2130,7 +2116,7 @@ function exportarPDF(){
       <td>${escapeHtml(r.reportador||'')}</td>
       <td style="text-align:center;">${ic(fH)}</td>
       <td style="text-align:center;min-width:80px;">
-        ${firmaImg?'<img src="'+firmaImg+'" style="height:45px;max-width:90px;object-fit:contain;" onerror="this.style.display='none'">':'<span style="color:#ccc;font-size:7px;">Sin firma</span>'}
+        ${firmaImg?'<img src="'+firmaImg+'" style="height:45px;max-width:90px;object-fit:contain;" onerror="this.style.display=\'none\'">':'<span style="color:#ccc;font-size:7px;">Sin firma</span>'}
         <div style="font-size:7px;color:#555;margin-top:2px;border-top:1px solid #ccc;padding-top:2px;">${escapeHtml(r.reportador||'')}</div>
       </td>
     </tr>`;
@@ -2143,14 +2129,9 @@ function exportarPDF(){
   window.onload=()=>{
     const imgs=document.querySelectorAll('img');
     if(!imgs.length){setTimeout(()=>window.print(),500);return;}
-    let loaded=0;
-    const total=imgs.length;
+    let loaded=0;const total=imgs.length;
     const tryPrint=()=>{loaded++;if(loaded>=total)setTimeout(()=>window.print(),300);};
-    imgs.forEach(img=>{
-      if(img.complete){tryPrint();}
-      else{img.onload=tryPrint;img.onerror=tryPrint;}
-    });
-    // Fallback: si en 6s no cargaron todas, imprimir igual
+    imgs.forEach(img=>{if(img.complete){tryPrint();}else{img.onload=tryPrint;img.onerror=tryPrint;}});
     setTimeout(()=>window.print(),6000);
   };
   <\/script></body></html>`;
