@@ -536,7 +536,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const SHEETS_URL='https://script.google.com/macros/s/AKfycbzevBm9J8Q2KH66dWEpkIdjzsDqfrXrSn6nEsqkPVD4aqdTnmNf5KKRBPPuUBZFULoT/exec';
+const SHEETS_URL='https://script.google.com/macros/s/AKfycbzpq840hyMduK8TF7SooRQO9MgxRykJvmpqh2x1efFmP6OlhbYoW0GIy7pAErxySCCM/exec';
 const PENDING_KEY='seguridad_pending', PERSONAL_KEY='seguridad_personal', PENDING_UPDATES_KEY='seguridad_pending_updates';
 
 // ── FUENTE DE VERDAD: siempre el servidor ──
@@ -1823,7 +1823,13 @@ async function autoSync(){
       // Subir firma de registro si es dataURL
       if(r.firmaRegistro && r.firmaRegistro.startsWith('data:')){
         const lf=await subirFirma(r.firmaRegistro,'firma_reg_'+r.id);
-        if(lf) r.firmaRegistro=lf;
+        if(lf){
+          r.firmaRegistro=lf;
+          console.log('Firma registro subida OK:',lf);
+        } else {
+          console.warn('Firma registro NO subida, se enviará vacía');
+          r.firmaRegistro=''; // enviar vacío para no romper la fila
+        }
       }
 
       // Subir fotos de cierre
@@ -2043,11 +2049,21 @@ function initFirmaCanvas(id){
 function limpiarFirma(id){const c=document.getElementById(id);if(!c)return;c.getContext('2d').clearRect(0,0,c.width,c.height);c._hasData=false;}
 function getFirmaDataURL(id){const c=document.getElementById(id);return(c&&c._hasData)?c.toDataURL('image/png'):null;}
 async function subirFirma(dataURL,nombre){
-  if(!dataURL)return null;
-  try{const b64=dataURL.split(',')[1];
-    const res=await fetch(SHEETS_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify({type:'firma',nombre:nombre+'.png',mime:'image/png',data:b64})});
-    if(res.ok){const j=await res.json();if(j.ok&&j.url)return j.url;}
-  }catch(e){console.error('Error firma:',e);}return null;
+  if(!dataURL||!dataURL.startsWith('data:'))return null;
+  try{
+    const parts=dataURL.split(',');
+    if(parts.length<2||!parts[1]){console.warn('Firma dataURL inválida');return null;}
+    const b64=parts[1];
+    console.log('Subiendo firma:',nombre,'tamaño b64:',b64.length);
+    const res=await fetch(SHEETS_URL,{method:'POST',mode:'cors',headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify({type:'firma',nombre:nombre+'.png',mime:'image/png',data:b64})});
+    if(!res.ok){console.error('subirFirma HTTP error:',res.status);return null;}
+    const j=await res.json();
+    console.log('subirFirma respuesta:',j);
+    if(j.ok&&j.url)return j.url;
+    console.warn('subirFirma sin URL:',j);
+  }catch(e){console.error('Error subirFirma:',e);}
+  return null;
 }
 window.addEventListener('load',()=>{initFirmaCanvas('firmaCanvas');});
 
@@ -2088,7 +2104,7 @@ function generarVale(id){
   <div class="firmas"><div class="fb">${fsig(r.firmaRegistro,'Firma Registrador')}<div style="font-size:9px;color:#555;margin-top:2px;">${r.reportador||''}</div></div>
   ${r.firmaEdicion&&r.firmaEdicion!=='null'?`<div class="fb">${fsig(r.firmaEdicion,'Firma Editor')}</div>`:''}</div>
   <div style="text-align:center;margin-top:20px;font-size:8px;color:#aaa;border-top:1px solid #eee;padding-top:6px;">Compañía Minera Casma SAC — RUC 20606447192</div>
-  <script>window.onload=()=>setTimeout(()=>window.print(),2000);<\/script></body></html>`;
+  <script>window.onload=()=>{const imgs=document.querySelectorAll("img");if(!imgs.length){setTimeout(()=>window.print(),500);return;}let loaded=0;const total=imgs.length;const tryPrint=()=>{loaded++;if(loaded>=total)setTimeout(()=>window.print(),300);};imgs.forEach(img=>{if(img.complete){tryPrint();}else{img.onload=tryPrint;img.onerror=tryPrint;}});setTimeout(()=>window.print(),6000);};<\/script></body></html>`;
   const w=window.open('','_blank');w.document.write(h);w.document.close();
 }
 
@@ -2101,40 +2117,17 @@ function exportarPDF(){
   let rows='';
   data.forEach(r=>{
     const fH=toArray(r.fotos).length?toArray(r.fotos):toArray(r.linksFotos);
-    const ic=u=>u.slice(0,1).map(x=>'<img src="'+driveThumb(x)+'" style="width:55px;height:40px;object-fit:cover;border-radius:3px;" onerror="this.style.display=\'none\'">').join('');
+    const fL=toArray(r.fotosLevantamiento).length?toArray(r.fotosLevantamiento):toArray(r.linksFotosLevantamiento);
+    const ic=u=>u.slice(0,2).map(x=>'<img src="'+driveThumb(x)+'" style="width:65px;height:48px;object-fit:cover;border-radius:3px;margin:1px;" onerror="this.style.display=\'none\'">').join('');
     const e=r.estado||'Abierto';
     const firmaImg=firmThumb(r.firmaRegistro);
-    rows+=`<tr>
-      <td style="font-family:monospace;text-align:center;white-space:nowrap;">${r.id}</td>
-      <td style="white-space:nowrap;">${fd(r.fecha)}</td>
-      <td>${r.tipo||''}</td>
-      <td>${r.ubicacion||''}</td>
-      <td>${r.nivelRiesgo||''}</td>
-      <td style="max-width:160px;white-space:pre-wrap;">${escapeHtml((r.descripcion||'').slice(0,180))}</td>
-      <td style="color:${e==='Cerrado'?'#1a9e5c':'#d63b3b'};font-weight:600;white-space:nowrap;">● ${e}</td>
-      <td style="max-width:130px;white-space:pre-wrap;">${escapeHtml((r.medidasAcciones||'').slice(0,120))}</td>
-      <td>${escapeHtml(r.reportador||'')}</td>
-      <td style="text-align:center;">${ic(fH)}</td>
-      <td style="text-align:center;min-width:80px;">
-        ${firmaImg?'<img src="'+firmaImg+'" style="height:45px;max-width:90px;object-fit:contain;" onerror="this.style.display=\'none\'">':'<span style="color:#ccc;font-size:7px;">Sin firma</span>'}
-        <div style="font-size:7px;color:#555;margin-top:2px;border-top:1px solid #ccc;padding-top:2px;">${escapeHtml(r.reportador||'')}</div>
-      </td>
-    </tr>`;
+    rows+=`<tr><td style="font-family:monospace;text-align:center;">${r.id}</td><td>${fd(r.fecha)}</td><td>${r.hora||''}</td><td>${r.tipo||''}</td><td>${r.ubicacion||''}</td><td>${r.nivelRiesgo||''}</td><td style="max-width:170px;white-space:pre-wrap;">${escapeHtml((r.descripcion||'').slice(0,200))}</td><td>${ic(fH)}</td><td style="color:${e==='Cerrado'?'#1a9e5c':'#d63b3b'};font-weight:600;">● ${e}</td><td>${ic(fL)}</td><td style="max-width:140px;white-space:pre-wrap;">${escapeHtml((r.medidasAcciones||'').slice(0,150))}</td><td>${escapeHtml(r.causaProbable||'')}</td><td>${escapeHtml(r.reportador||'')}</td><td style="text-align:center;min-width:80px;">${firmaImg?'<img src="'+firmaImg+'" style="height:45px;max-width:90px;object-fit:contain;" onerror="this.style.display=\'none\'"><div style="font-size:7px;color:#555;margin-top:2px;border-top:1px solid #ccc;">'+escapeHtml(r.reportador||'')+'</div>':'<span style="font-size:7px;color:#ccc;">Sin firma</span>'}</td></tr>`;
   });
   const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Reporte Desviaciones</title><style>body{font:9px/1.4 Arial,sans-serif;margin:14px;}.hdr{display:flex;align-items:center;gap:10px;border-bottom:2px solid #1a2636;padding-bottom:8px;margin-bottom:10px;}.hdr img{width:55px;height:55px;object-fit:contain;}h1{font-size:12px;color:#1a2636;margin:0;}h2{font-size:9px;color:#555;margin:0;font-weight:normal;}table{width:100%;border-collapse:collapse;}th{background:#1a2636;color:#fff;padding:4px 3px;text-align:left;font-size:8px;text-transform:uppercase;white-space:nowrap;}td{padding:3px;border:1px solid #ddd;vertical-align:top;font-size:8px;}tr:nth-child(even){background:#f8f9fb;}@media print{body{margin:6px;}@page{size:A3 landscape;margin:8mm;}}</style></head><body>
   <div class="hdr"><img src="${LOGO_DATA}"><div><h1>COMPAÑÍA MINERA CASMA SAC</h1><h2>RUC: 20606447192 — REPORTE DE DESVIACIONES — INTERIOR MINA</h2><h2>Total: ${data.length} registros | Generado: ${new Date().toLocaleDateString('es-PE')}</h2></div></div>
-  <table><thead><tr><th>ID</th><th>Fecha</th><th>Tipo</th><th>Lugar</th><th>Riesgo</th><th>Descripción</th><th>Estado</th><th>Medidas</th><th>Reportante</th><th>Foto</th><th style="min-width:90px;">Firma Registrador</th></tr></thead><tbody>${rows}</tbody></table>
+  <table><thead><tr><th>ID</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Lugar</th><th>Riesgo</th><th>Descripción</th><th>Foto hallazgo</th><th>Estado</th><th>Foto lev.</th><th>Medidas</th><th>Causa</th><th>Reportante</th><th>Firma</th></tr></thead><tbody>${rows}</tbody></table>
   <div style="text-align:center;margin-top:10px;font-size:7px;color:#aaa;">Compañía Minera Casma SAC — RUC 20606447192</div>
-  <script>
-  window.onload=()=>{
-    const imgs=document.querySelectorAll('img');
-    if(!imgs.length){setTimeout(()=>window.print(),500);return;}
-    let loaded=0;const total=imgs.length;
-    const tryPrint=()=>{loaded++;if(loaded>=total)setTimeout(()=>window.print(),300);};
-    imgs.forEach(img=>{if(img.complete){tryPrint();}else{img.onload=tryPrint;img.onerror=tryPrint;}});
-    setTimeout(()=>window.print(),6000);
-  };
-  <\/script></body></html>`;
+  <script>window.onload=()=>{const imgs=document.querySelectorAll("img");if(!imgs.length){setTimeout(()=>window.print(),500);return;}let loaded=0;const total=imgs.length;const tryPrint=()=>{loaded++;if(loaded>=total)setTimeout(()=>window.print(),300);};imgs.forEach(img=>{if(img.complete){tryPrint();}else{img.onload=tryPrint;img.onerror=tryPrint;}});setTimeout(()=>window.print(),6000);};<\/script></body></html>`;
   const w=window.open('','_blank');w.document.write(h);w.document.close();
 }
 
