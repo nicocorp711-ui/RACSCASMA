@@ -376,7 +376,7 @@
   </div>
 
   <div class="form-section">
-    <label class="form-label">Foto del hallazgo <span class="form-required">*</span></label>
+    <label class="form-label">Foto del hallazgo</label>
     <input type="file" id="inputGaleria" accept="image/*" multiple style="display:none" onchange="handlePhotos(this, 'hallazgo')">
     <input type="file" id="inputCamara" accept="image/*" capture="environment" style="display:none" onchange="handlePhotos(this, 'hallazgo')">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -397,7 +397,7 @@
   <div id="seccionLevantamiento" style="display:none;">
     <div class="divider"></div>
     <div class="form-section">
-      <label class="form-label">Fotos de cierre <span class="form-required">*</span></label>
+      <label class="form-label">Fotos de cierre</label>
       <input type="file" id="inputGaleriaLev" accept="image/*" multiple style="display:none" onchange="handlePhotos(this, 'levantamiento')">
       <input type="file" id="inputCamaraLev" accept="image/*" capture="environment" style="display:none" onchange="handlePhotos(this, 'levantamiento')">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -910,7 +910,7 @@ function guardarReporte(){
   if(!g('categoria'))      {showToast('⚠ Selecciona una categoría');return;}
   if(g('categoria')==='Otro' && !g('categoriaOtro')){showToast('⚠ Describe la categoría en Otro');return;}
   if(!g('descripcion'))    {showToast('⚠ Ingresa una descripción');return;}
-  if(!causaSeleccionadaValor){showToast('⚠ Selecciona una causa probable');return;}
+
   if(!g('responsable'))    {showToast('⚠ Ingresa el responsable de la acción correctiva');return;}
   if(!g('ubicacion'))      {showToast('⚠ Selecciona el Área / Ubicación');return;}
   if(g('ubicacion')==='Otros' && !g('ubicacionOtros')){showToast('⚠ Especifica la ubicación');return;}
@@ -1261,7 +1261,7 @@ function abrirEdicion(id){
 
     <div id="editLevantamientoSection" style="display:${estadoActual==='Cerrado'?'block':'none'};">
       <div class="form-section">
-        <label class="form-label">Fotos de cierre <span class="form-required">*</span></label>
+        <label class="form-label">Fotos de cierre</label>
         <input type="file" id="editInputGaleriaLev" accept="image/*" multiple style="display:none" onchange="handlePhotos(this, 'editLev')">
         <input type="file" id="editInputCamaraLev" accept="image/*" capture="environment" style="display:none" onchange="handlePhotos(this, 'editLev')">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
